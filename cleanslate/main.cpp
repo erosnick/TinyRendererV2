@@ -5,6 +5,9 @@
 const int width = 500;
 const int height = 500;
 
+const float M_PI = 3.1415926f;
+const float M_PI_4 = M_PI * 0.25f;
+const float M_PI_2 = M_PI * 0.5f;
 
 mat<4,4,float> viewport(int width, int height) {
     //viewport = scale * T
@@ -402,6 +405,15 @@ int main() {
     floor_modelworld[1][3] = 0.15;//ty
     floor_modelworld[2][3] = -0.5f;//tz
 
+	mat<4, 4, float> tifa_modelworld = mat<4, 4, float>::identity();
+    tifa_modelworld[0][3] = 0;//tx
+    tifa_modelworld[1][3] = -0.75;//ty
+    tifa_modelworld[2][3] = 0.0f;//tz
+
+    //tifa_modelworld[0][0] = 0.25f;  //sx
+    //tifa_modelworld[1][1] = 0.25f;  //sy
+    //tifa_modelworld[2][2] = 0.25f;  //sz
+
     Vec3f eye {0.07, 0.1f, 0.25f};
     // Vec3f eye {0.5, 0.0f, 0.0f};
     mat<4,4,float> view = lookAt(eye, {0.0f, 0.0f, 0.001f}, {0.0f, 1.0f, 0.0f});
@@ -411,30 +423,61 @@ int main() {
     float zbuffer[width*height];
     std::fill(zbuffer, zbuffer + (width * height), std::numeric_limits<float>::lowest());
 
-    Model head("../res/diablo3_pose.obj");
-    Model floor("../res/floor.obj");
+    Model head("res/diablo3_pose.obj");
+    Model floor("res/floor.obj");
+	Model tifa_head("res/tifa_head.obj");
+	Model tifa_hair("res/tifa_hair.obj");
+	Model tifa_marineCharm("res/tifa_marineCharm.obj");
+	Model tifa_dress("res/tifa_dress.obj");
+	Model tifa_skin("res/tifa_skin.obj");
+	Model tifa_eye("res/tifa_eye.obj");
 
-    // TGAImage *aoimage = new TGAImage(1024, 1024, TGAImage::RGB);
-    // make_aoimage(head, *aoimage);
-    // aoimage->flip_vertically();
-    // aoimage->write_tga_file("ao2.tga");
+    //// TGAImage *aoimage = new TGAImage(1024, 1024, TGAImage::RGB);
+    //// make_aoimage(head, *aoimage);
+    //// aoimage->flip_vertically();
+    //// aoimage->write_tga_file("ao2.tga");
 
     //shadow pass
     TGAImage shadowimg(width, height, TGAImage::RGBA);
-    float shadowmap[width*height];
-    std::fill(shadowmap, shadowmap + (width * height), std::numeric_limits<float>::lowest());
-    Vec3f light_pos {0.5f, 0.5f, 0.5f};
-    Vec3f light_lookat {0.0f, 0.0f, 0.0f};
-    mat<4,4,float> light_view = lookAt(light_pos, light_lookat, {0.0f, 1.0f, 0.0f});
-    Shadow shadow(light_view * modelworld);
-    shadow._model = &head;
-    rasterize(shadow, vp, shadowmap, shadowimg);
+    float* shadowmap = new float[width*height];
+	std::fill(shadowmap, shadowmap + (width * height), std::numeric_limits<float>::lowest());
+	Vec3f light_pos{ 0.5f, 0.5f, 0.5f };
+	Vec3f light_lookat{ 0.0f, 0.0f, 0.0f };
+	mat<4, 4, float> light_view = lookAt(light_pos, light_lookat, { 0.0f, 1.0f, 0.0f });
+	Shadow shadow(light_view * modelworld);
+	shadow._model = &head;
+	//rasterize(shadow, vp, shadowmap, shadowimg);
 
-    shadow.u_mvp = light_view * floor_modelworld;
-    shadow._model = &floor;
-    rasterize(shadow, vp, shadowmap, shadowimg);
-    shadowimg.flip_vertically();
-    shadowimg.write_tga_file("shadowmap.tga");
+	shadow.u_mvp = light_view * floor_modelworld;
+	shadow._model = &floor;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_head;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_hair;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_marineCharm;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_dress;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_skin;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadow.u_mvp = light_view * tifa_modelworld;
+	shadow._model = &tifa_eye;
+	rasterize(shadow, vp, shadowmap, shadowimg);
+
+	shadowimg.flip_vertically();
+	shadowimg.write_tga_file("shadowmap.tga");
 
 
     //SSAO
@@ -443,10 +486,34 @@ int main() {
         //depth pass
         Shadow zshader(projection*view*modelworld);
         zshader._model = &head;
-        rasterize(zshader, vp, zbuffer, shadowimg);
+        //rasterize(zshader, vp, zbuffer, shadowimg);
         zshader.u_mvp = projection*view*floor_modelworld;
         zshader._model = &floor;
         rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_head;
+		rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_hair;
+		rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_marineCharm;
+		rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_dress;
+		rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_skin;
+		rasterize(zshader, vp, zbuffer, shadowimg);
+
+		zshader.u_mvp = projection * view * tifa_modelworld;
+		zshader._model = &tifa_eye;
+		rasterize(zshader, vp, zbuffer, shadowimg);
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -481,14 +548,50 @@ int main() {
     ao->read_tga_file("./ssao.tga");
     ao->flip_vertically();
     shader.u_aomap = ao;
-    rasterize(shader, vp, zbuffer, framebuffer);
-   
-
+    //rasterize(shader, vp, zbuffer, framebuffer);
+  
     shader.u_mvp = projection*view*floor_modelworld;
     shader.u_nm = (view*floor_modelworld).invert_transpose();
     shader.u_sm = light_view * floor_modelworld * (view * floor_modelworld).invert();
     shader._model = &floor;
     rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_head;
+	rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_hair;
+    rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_marineCharm;
+	rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_dress;
+	rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_skin;
+	rasterize(shader, vp, zbuffer, framebuffer);
+
+	shader.u_mvp = projection * view * tifa_modelworld;
+	shader.u_nm = (view * tifa_modelworld).invert_transpose();
+	shader.u_sm = light_view * tifa_modelworld * (view * tifa_modelworld).invert();
+	shader._model = &tifa_eye;
+	rasterize(shader, vp, zbuffer, framebuffer);
+
     delete ao;
 
     //zbuffer visualization
@@ -503,5 +606,8 @@ int main() {
 
     framebuffer.flip_vertically();//make (0,0) at bottom left, x going right, y going up
     framebuffer.write_tga_file("frame.tga");
+
+    delete[] shadowmap;
+
     return 0;
 }
